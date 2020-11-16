@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Test ANNetwork</title>
+		<link rel="stylesheet" type="text/css" href="style.css" />
+	</head>
+	<body>
+		<h1>Test Artifical Neural Network</h1>
+		<script src="scripts/neuro.js"></script>
+		<script>
+
+			"use strict";
+
+			function log(obj) {
+				console.log(obj);
+				document.body.innerHTML += obj + '<br>';
+			}
+
+			function pickByTournament(scores) {
+				let size = scores.length;
+				let fighter1 = Math.floor(Math.random() * size);
+				let fighter2 = Math.floor(Math.random() * size);
+				return scores[fighter1] >= scores[fighter2] ? fighter1 : fighter2;
+			}
+
+			function breedByCrossover(parent1, parent2) {
+				let child1 = parent1.clone();
+				let child2 = parent2.clone();
+				for(let i = 0; i < parent1.layers.length; i++) {
+					for(let j = 0; j < parent1.layers[i].length; j++) {
+						if(Math.random() > 0.5) {
+							// Swap weights
+							[child1.layers[i][j].bias, child2.layers[i][j].bias] = [child2.layers[i][j].bias, child1.layers[i][j].bias];
+						}
+					}
+				}
+				for(let i = 0; i < parent1.weights.length; i++) {
+					for(let j = 0; j < parent1.weights[i].length; j++) {
+						for(let k = 0; k < parent1.weights[i][j].length; k++) {
+							if(Math.random() > 0.5) {
+								// Swap weights
+								[child1.weights[i][j][k], child2.weights[i][j][k]] = [child2.weights[i][j][k], child1.weights[i][j][k]];
+							}
+						}
+					}
+				}
+				return [child1, child2];
+			}
+
+			function mutatePopulation(population, rate) {
+				let count = 0;
+				population.forEach(function(ind) {
+					for(let i = 0; i < ind.layers.length; i++) {
+						for(let j = 0; j < ind.layers[i].length; j++) {
+							if(Math.random() > rate)
+								continue;
+							count++;
+							// Random weight mutation
+							// TODO: May be add?
+							ind.layers[i][j].bias = Math.random() * 2 - 1;
+						}
+					}
+					for(let i = 0; i < ind.weights.length; i++) {
+						for(let j = 0; j < ind.weights[i].length; j++) {
+							for(let k = 0; k < ind.weights[i][j].length; k++) {
+								if(Math.random() > rate)
+									continue;
+								count++;
+								// Random weight mutation
+								// TODO: May be add?
+								ind.weights[i][j][k] = Math.random() * 2 - 1;
+							}
+						}
+					}
+				});
+				//log(`Total mutations: ${count}`);
+			}
+
+			var pool = [];
+			for(let i = 0; i < 100; i++) {
+				pool.push(new ANNetwork([2, 1]));
+			}
+
+			function getScores(population) {
+				let inputs = [Math.random() * 2 - 1, Math.random() * 2 - 1];
+				let target = (inputs[0] + inputs[1]) * 0.5;
+				return population.map(function(ind) {
+					return 1 - Math.abs(ind.getOutputs(inputs)[0] - target);
+				});
+			}
+
+			async function evolve() {
+				log("Evolving...");
+				for(let generation = 0; generation < 10000; generation++) {
+					let scores = getScores(pool);
+					if(generation % 100 == 0)
+						log(`Generation: ${generation}; Best score: ${Math.max.apply(null, scores)}`);
+					let newPool = [];
+					// Breed
+					for(let i = 0; i < pool.length / 2; i++) {
+						// Append array of 2 children to population
+						newPool.push.apply(newPool, breedByCrossover(
+							pool[pickByTournament(scores)],
+							pool[pickByTournament(scores)]
+						));
+					}
+					mutatePopulation(newPool, 0.1);
+					pool = newPool;
+				}
+				let scores = getScores(pool);
+				log(`Final best score: ${Math.max.apply(null, scores)}`);
+				log(scores);
+			}
+
+			evolve();
+		</script>
+	</body>
+</html>
